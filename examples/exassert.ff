@@ -1,0 +1,19 @@
+program exassert
+   x,y,z,a: integer;
+begin 
+    z := 0;
+    a := 0;
+    x := 10;
+    y := 15;
+    //read x;
+    //read y;
+    while x < y loop
+        y := y - x;
+        if x > a then 
+            y := y - x;
+            //z := z + x;
+        endif;
+        assert(z > a);
+    endloop;
+    //write y;
+end

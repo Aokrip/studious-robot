@@ -1,0 +1,9 @@
+program boucle 
+  x,y : integer ; 
+begin
+  x := 0 ;
+  y := 4 ;
+  while (x < y) loop 
+     x := x + 1 ;
+  endloop;
+end

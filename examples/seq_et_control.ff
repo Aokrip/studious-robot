@@ -1,0 +1,12 @@
+program toto 
+    x : integer ;
+begin
+    x := 0 ;
+    while x < 10 loop 
+        x := 3 ;
+        x := 42 ;
+        x := x+1 ;
+    endloop ;
+    x := 3 ;
+    x := 42 ;
+end

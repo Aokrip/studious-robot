@@ -1,0 +1,11 @@
+program boucle 
+  x,y : integer ; 
+begin
+  x := 0 ;
+  y := 5 ;
+  while (x < y) loop 
+     assert 2*y - x == 10 ;
+     x := x + 2 ;
+     y := y + 1 ;
+  endloop;
+end

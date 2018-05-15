@@ -1,0 +1,13 @@
+digraph g {
+"Entry0 Interval@4032d386 "->"Assign_after2 Interval@b83a9be "[label="x:=0"]
+
+"Assign_after2 Interval@b83a9be "->"Entry3 Interval@2609b277 "[label="(x<4)"]
+"Assign_after2 Interval@b83a9be "->"While_exit7 Interval@563e4951 "[label="! (x<4)"]
+
+"Entry3 Interval@2609b277 "->"Assign_after5 Interval@1fd14d74 "[label="x:=(x+1)"]
+
+"Assign_after5 Interval@1fd14d74 "->"Assign_after2 Interval@b83a9be "[label="true"]
+
+
+
+}

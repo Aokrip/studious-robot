@@ -1,0 +1,429 @@
+// Langage de base : if, while, assert, types integer et boolean, pas de bloc  
+// de declaration, pas de procedure
+
+options {
+    LOOKAHEAD = 1;
+    CHOICE_AMBIGUITY_CHECK = 2;
+    OTHER_AMBIGUITY_CHECK = 1;
+    STATIC = true;
+    DEBUG_PARSER = false;
+    DEBUG_LOOKAHEAD = false;
+    DEBUG_TOKEN_MANAGER = false;
+    ERROR_REPORTING = true;
+    JAVA_UNICODE_ESCAPE = false;
+    UNICODE_INPUT = false;
+    IGNORE_CASE = false;
+    USER_TOKEN_MANAGER = false;
+    USER_CHAR_STREAM = false;
+    BUILD_PARSER = true;
+    BUILD_TOKEN_MANAGER = true;
+    SANITY_CHECK = true;
+    FORCE_LA_CHECK = false;
+}
+
+
+PARSER_BEGIN(Lg)
+
+import java.io.*;
+
+
+public class Lg {
+
+    // Only one "assert" instruction is allowed
+    static boolean assertEncountered = false;
+
+    static BufferedWriter outdot;    // dot, for dotty
+    static BufferedWriter outresult; // tabular with the results of the Kleene iteration
+    static BufferedWriter outlatex;    // main latex file including the results
+
+
+    public static void main (String args[]) throws ParseException {
+        if (args.length != 1)
+            System.err.println ("Usage : java Lg <prog.ff>");
+        else {
+            try {
+                // Create output file
+                FileWriter f1stream = new FileWriter(args[0]+".dot");
+                outdot = new BufferedWriter(f1stream);
+                FileWriter f2stream = new FileWriter(args[0]+".result");
+                outresult = new BufferedWriter(f2stream);
+                FileWriter f3stream = new FileWriter(args[0]+".tex");
+                outlatex = new BufferedWriter(f3stream);
+
+                // parse input
+                Lg parser =
+                    new Lg (new java.io.FileInputStream (args[0])) ;
+                parser.Input();
+
+                outdot.close();
+                outresult.close();
+                // generate Latex file and close
+                generateMain (outlatex,  args[0]+".result");
+                outlatex.close();
+            }
+            catch (java.io.FileNotFoundException ef) {
+                System.err.println (args[0] + "not found, aborting");
+            }
+            catch (java.io.IOException eio) {
+                System.err.println (args[0] + "io error, aborting");
+            }
+        }
+    }
+
+    static void generateMain
+        (BufferedWriter outlatex, String nameresults)
+        throws java.io.IOException
+    {
+        outlatex.write("\\documentclass[10pt]{article}\n");
+        outlatex.write("\\usepackage{lscape}\n");
+        outlatex.write("\\begin{document}\n");
+        outlatex.write("{\\tiny\n");
+        outlatex.write("\\begin{landscape}\n");
+        outlatex.write("\\input{../" + nameresults +"}\n");
+        outlatex.write("\\end{landscape}\n");
+        outlatex.write("}\n");
+        outlatex.write("\\end{document}\n");
+    }
+
+}
+
+PARSER_END(Lg)
+
+
+SKIP:   // Separators
+{
+    " "
+  | "\t"
+  | "\n"
+  | "\r"
+  |  <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>  // Comments
+}
+
+
+
+TOKEN:
+{
+          <PROG:    "program">
+        | <BEGIN:   "begin">
+        | <END:     "end">
+        | <IF:      "if">
+        | <THEN:    "then">
+        | <ELSE:    "else">
+        | <ENDIF:   "endif">
+        | <WHILE:   "while">
+        | <READ:    "read">
+        | <WRITE:   "write">
+        | <LOOP:    "loop">
+        | <ENDLOOP: "endloop">
+        | <ASSERT:  "assert">
+        | <INT:     "integer">
+        | <BOOL:    "boolean">
+        | <TRUE:    "true">
+        | <FALSE:   "false">
+        | <LPAR:    "(">
+        | <RPAR:    ")">
+        | <PV:      ";">
+        | <DP:      ":">
+        | <VIRG:    ",">
+        | <AFFECT:  ":=">
+        | <IDF:     ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9"])*>
+        | <INTPOS:  ["0"-"9"] (["0"-"9"])*>
+        | <PLUS:    "+">
+        | <MULT:    "*">
+        | <MOINS:   "-">
+        | <DIV:     "/">
+        | <AND:     "&&">
+        | <OR:      "||">
+        | <NOT:     "!">
+        | <SUP:     ">">
+        | <INF:     "<">
+        | <EGAL:    "==">
+}
+
+/* ===================================================
+ */
+void Input (): { ProgNode m;}
+{
+    m=main () <EOF>
+        {
+            System.out.println (m);
+            try {
+                m.analyse();
+                System.out.println (m.getDecls());
+            }
+            catch (AnalyseException ea) {
+                System.out.println (ea.getMessage());
+                System.out.println ("aborting");
+                return;
+            }
+
+            // The control graph
+            ControlGraph g = m.buildControlGraph();
+            System.out.println (g);
+            System.out.println (g.toDotFile());
+
+            // Abstract interpretation
+            g.computeAbstractIntervals(m.getDecls());
+            try {
+                Lg.outdot.write(g.toDotFile());
+                Lg.outresult.write(g.toResultFile());
+            }
+            catch (java.io.IOException io) {
+                System.err.println ("IO error");
+            }
+
+            System.out.println("assert may be violated: "
+                               + g.errorIsReachable());
+        }
+}
+
+/* ===================================================
+ */
+ProgNode main (): {
+    DeclsNode d;
+    InstsNode i;
+    Token t;
+    Token n;
+}
+{
+    t=<PROG> n=<IDF> d=Decls() <BEGIN> i=Insts() <END>
+        { return new ProgNode (t, n, new BlocNode (t, d, i)); }
+}
+
+/* ===================================================
+ */
+DeclsNode Decls (): {
+    Token t = new Token();
+    DeclNode d;
+    java.util.List<DeclNode>  decls = new java.util.LinkedList<DeclNode> ();
+}
+{
+    (d=Decl () { decls.add (d); } t=<PV>)*
+        { return new DeclsNode (t, decls); }
+}
+
+/* ===================================================
+ */
+DeclNode Decl (): {
+    Token t;
+    TypeNode ty;
+    java.util.List<Idf> li;
+}
+{
+    li = LidfNV () t=<DP> ty=Type ()
+        { return new DeclNode (t, li, ty); }
+}
+
+/* ===================================================
+ */
+java.util.List<Idf> LidfNV (): {
+    Token t;
+    java.util.List<Idf> li;
+}
+{
+    t=<IDF> { li = new java.util.LinkedList<Idf> (); li.add (new Idf(t)); }
+    (<VIRG> t=<IDF> { li.add (new Idf(t)); } )*
+        { return  li; }
+}
+
+/* ===================================================
+ */
+TypeNode Type (): {
+    Token t;
+}
+{
+    t=<INT>  { return new TypeNode (t); }
+  | t=<BOOL> { return new TypeNode (t); }
+}
+
+/* ===================================================
+ */
+InstsNode Insts (): {
+    Token t = new Token();
+    InstNode ii;
+    java.util.List<InstNode>  insts =  new java.util.LinkedList<InstNode> ();
+}
+{
+    (ii = Inst () t=<PV> { insts.add (ii); } )*
+        { return new InstsNode (t, insts); }
+}
+
+/* ===================================================
+ */
+InstNode  Inst (): {
+    ReadNode re;
+    WriteNode wr;
+    AffNode af;
+    WhileNode wi;
+    CondNode cd;
+    AssertNode as;
+}
+{
+    re=InstRead ()  { return re; }
+  | wr=InstWrite () { return wr; }
+  | af=InstAff ()   { return af; }
+  | wi=InstWhile () { return wi;}
+  | cd=InstCond ()  { return cd;}
+  | as=InstAssert()
+    {
+        if (!Lg.assertEncountered) {
+            Lg.assertEncountered = true;
+            return as;
+        } else {
+            throw new UnsupportedOperationException
+            ("multiple assertion not implemened");
+        }
+    }
+}
+
+/* ===================================================
+ */
+ReadNode InstRead (): {
+    Token t, ii;
+}
+{
+    t=<READ> ii=<IDF>
+        { return new ReadNode (t, ii); }
+}
+
+/* ===================================================
+ */
+WriteNode InstWrite (): {
+    Token t;
+    ExprNode e;
+}
+{
+    t=<WRITE> e = Expr()
+        { return new WriteNode (t, e); }
+}
+
+/* ===================================================
+ */
+AffNode InstAff (): {
+    Token t;
+    Token idf;
+    ExprNode e;
+}
+{
+    idf=<IDF> t=<AFFECT> e=Expr() { return new AffNode(t, idf, e); }
+}
+
+/* ===================================================
+ */
+WhileNode InstWhile (): {
+    Token t;
+    InstsNode body;
+    ExprNode c;
+}
+{
+    t=<WHILE> c=Expr () <LOOP> body=Insts () <ENDLOOP>
+        { return new WhileNode (t, c, body); }
+}
+
+/* ===================================================
+ */
+CondNode InstCond (): {
+    Token t;
+    ExprNode c;
+    InstsNode th, el  = null;
+}
+{
+    t=<IF> c=Expr () <THEN> th=Insts () [ <ELSE> el=Insts () ] <ENDIF>
+        { return new  CondNode (t, c, th, el); }
+}
+
+/* ===================================================
+ */
+AssertNode InstAssert(): {
+    Token t;
+    ExprNode e;
+}
+{
+    t = <ASSERT> e = Expr()
+    { return new AssertNode(t, e); }
+}
+
+/* ===================================================
+ */
+ExprNode Expr (): {
+    Token t = null;
+    ExprNode s1, s2 = null;
+}
+{
+    s1 = SimpleExpr() (t = Relation() s2 = SimpleExpr())?
+        { if (s2 == null)
+                return s1;
+            else
+                return new ExprNode (t, s1, s2); }
+}
+
+/* ===================================================
+ */
+ExprNode SimpleExpr (): {
+    Token t ;
+    ExprNode t1, t2 = null;
+}
+{
+    t1=Terme () ( t=AddOp () t2=Terme ()  { t1 = new ExprNode (t, t1, t2); } )*
+        { return t1; }
+}
+
+
+/* ===================================================
+ */
+ExprNode Terme (): {
+    Token t;
+    ExprNode f1, f2;
+}
+{
+    f1=Factor() (t=MulOp() f2=Factor() { f1 = new ExprNode (t, f1, f2); } )*
+        { return f1; }
+}
+
+/* ===================================================
+ */
+ExprNode Factor(): {
+    Token t;
+    ExprNode u;
+}
+{
+      t=<IDF>    { return new ExprNode (t, new Idf(t)); }
+    | t=<INTPOS> { return new ExprNode (t, Integer.parseInt(t.image)); }
+    | t=<TRUE>   { return new ExprNode (t, true); }
+    | t=<FALSE>  { return new ExprNode (t, false); }
+    | <LPAR> u=Expr() <RPAR> { return u; }
+    | t=<NOT> u=Factor() { return new ExprNode (t, u); }
+}
+
+/* ===================================================
+ */
+Token Relation(): {
+    Token t;
+}
+{
+    t=<EGAL> { return t; }
+  | t=<INF> { return t ; }
+  | t=<SUP> { return t; }
+}
+
+/* ===================================================
+ */
+Token AddOp(): {
+    Token t ;
+}
+{
+      t=<PLUS> { return  t; }
+    | t=<MOINS> { return  t; }
+    | t=<OR> { return t; }
+}
+
+/* ===================================================
+ */
+Token MulOp(): {
+    Token t;
+}
+{
+    t=<MULT> { return t; }
+  | t=<DIV> { return  t; }
+  | t=<AND> { return  t; }
+}

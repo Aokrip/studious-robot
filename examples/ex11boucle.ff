@@ -1,0 +1,20 @@
+program toto
+   x, y: integer ;
+   z, u: integer ;
+begin 
+   z := 0 ;
+   x := 0 ;
+   y := 1 ;
+   u := 2 ;
+while u > z loop
+   if x < y then 
+     y := y + 1 ;
+   else 
+     x := x + 1 ;
+   endif ;
+   if  (y < z) then 
+     y := y - 1 ;
+   endif ;
+   u := u+1;
+endloop;
+end

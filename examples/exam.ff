@@ -1,0 +1,13 @@
+program simple
+    x , y : integer ;
+begin
+    if y > 0 then
+        y := y + 1;
+    else
+        if y==0 then
+            x := y ;
+        endif ;
+        y := y - 10;
+    endif ;
+end
+

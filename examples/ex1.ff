@@ -1,0 +1,9 @@
+program toto
+    x, y: integer ;
+begin 
+    x := 1 ;
+    y := 12 ;
+    while x < y loop 
+        x:=x+1 ;
+    endloop ;
+end

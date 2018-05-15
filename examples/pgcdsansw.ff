@@ -1,0 +1,17 @@
+program toto
+   x, y: integer ;
+   xx : boolean ;
+begin 
+    xx := true ;
+    read x ; 
+    read y ;
+    while  !(x == y) loop
+        if (x > y) then 
+           x := x - y ;
+           xx :=  ! xx  ;
+        else
+           y := y - x ;
+        endif ;
+    endloop ;
+end
+

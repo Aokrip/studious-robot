@@ -1,0 +1,13 @@
+program toto
+    x, y: integer ;
+    a, b : integer ;
+begin 
+    x := 0 ;
+    y := 1 ;
+    while ((x < y) || (x > y)) && (x == y)  loop 
+        if (a == b) && (a < b) then 
+            y := 0 ;
+        endif ;
+    endloop;
+    a := 12 ;
+end

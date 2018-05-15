@@ -1,0 +1,8 @@
+program toto
+   x, y: integer ;
+begin 
+   x := 0 ;
+   if (x < y) && (y < x) then 
+     y := y + 1 ;
+   endif ;
+end

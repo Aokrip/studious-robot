@@ -1,0 +1,13 @@
+program exocours1 
+  x, y, z : integer ;
+  u : boolean ; 
+begin
+  x := 12 ; y := 4 ; read z ;
+  u := true ;
+  if (z > y) && (x > 0) || !u then
+     while x < 3 loop
+        y := 2 ;
+     endloop ;
+  endif ;
+end
+

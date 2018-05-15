@@ -1,0 +1,9 @@
+program toto
+    x:integer;
+begin
+    if x == x then
+        x:=3;
+    else 
+        x:=0;
+    endif;
+end

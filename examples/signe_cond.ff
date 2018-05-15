@@ -1,0 +1,9 @@
+program toto
+    y,x:integer;
+begin
+    x:= 4;
+    y:=0;
+    if x < y then
+        x:=0;
+    endif;
+end
